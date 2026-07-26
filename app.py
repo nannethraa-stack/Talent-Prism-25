@@ -358,7 +358,7 @@ def send_results_email(user_name, target_email, pdf_bytes, top_5):
         return False
 
 # ==========================================
-# 5. STREAMLIT UI & WORKFLOW
+# 5. STREAMLIT UI & WORKFLOW (NO FORMS - BULLETPROOF)
 # ==========================================
 
 st.set_page_config(page_title="TalentPrism-25 Assessment Portal", layout="wide")
@@ -370,115 +370,58 @@ if "submitted" not in st.session_state:
     st.session_state.submitted = False
 if "validation_error" not in st.session_state:
     st.session_state.validation_error = []
+if "user_name" not in st.session_state:
+    st.session_state.user_name = ""
 
-# STEP 1: QUESTIONNAIRE FORM
+# STEP 1: QUESTIONNAIRE INTERFACE (Form-free to prevent locks)
 if not st.session_state.submitted:
-    with st.form("assessment_form"):
-        st.subheader("1. Candidate Details")
-        user_name = st.text_input("Full Name *", value=st.session_state.get("user_name", ""))
+    st.subheader("1. Candidate Details")
+    st.session_state.user_name = st.text_input("Full Name *", value=st.session_state.user_name)
 
-        st.subheader("2. Self-Report Questionnaire")
-        st.info("Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree). All questions are mandatory.")
+    st.subheader("2. Self-Report Questionnaire")
+    st.info("Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree). All questions are mandatory.")
 
-        answers = {}
-        for idx, statement in enumerate(STATEMENTS):
-            q_num = idx + 1
-            is_missing = q_num in st.session_state.validation_error
-            
-            st.markdown(f"<div id='q-target-{q_num}'></div>", unsafe_allow_html=True)
-
-            if is_missing:
-                st.markdown(f"<div style='border-left: 4px solid #ef4444; padding-left: 10px; background-color: #fef2f2; margin-top: 10px;'>", unsafe_allow_html=True)
-
-            answers[idx] = st.radio(
-                f"**Q{q_num}:** {statement}",
-                options=[1, 2, 3, 4, 5],
-                format_func=lambda x: {1: "1 - Strongly Disagree", 2: "2 - Disagree", 3: "3 - Neutral", 4: "4 - Agree", 5: "5 - Strongly Agree"}[x],
-                index=None,
-                horizontal=True,
-                key=f"q_{idx}"
-            )
-
-            if is_missing:
-                st.markdown("</div>", unsafe_allow_html=True)
-
-        submit_button = st.form_submit_button("Submit Assessment")
-
-        if submit_button:
-            unanswered_indices = [idx + 1 for idx, v in answers.items() if v is None]
-            
-            if not user_name.strip():
-                st.error("Please enter your Full Name to proceed.")
-            elif len(unanswered_indices) > 0:
-                st.session_state.validation_error = unanswered_indices
-                st.session_state.user_name = user_name
-                st.rerun()
-            else:
-                st.session_state.validation_error = []
-                st.session_state.user_name = user_name
-                st.session_state.answers = answers
-                st.session_state.submitted = True
-                st.rerun()
-
-    # POPUP NOTIFICATION & AUTO-SCROLL TO FIRST UNANSWERED QUESTION
-    if not st.session_state.submitted and st.session_state.validation_error:
-        missing_count = len(st.session_state.validation_error)
-        missing_str = ", ".join([f"Q{q_num}" for q_num in st.session_state.validation_error])
-        first_missing = st.session_state.validation_error[0]
+    answers = {}
+    for idx, statement in enumerate(STATEMENTS):
+        q_num = idx + 1
+        is_missing = q_num in st.session_state.validation_error
         
-        st.markdown(
-            f"""
-            <div id="error-popup-overlay" style="
-                position: fixed;
-                top: 0; left: 0; width: 100vw; height: 100vh;
-                background-color: rgba(15, 23, 42, 0.4);
-                backdrop-filter: blur(2px);
-                z-index: 999998;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            ">
-                <div style="
-                    background-color: #FFFFFF;
-                    color: #0F172A;
-                    padding: 24px 28px;
-                    border-radius: 12px;
-                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-                    border-top: 5px solid #EF4444;
-                    width: 90%;
-                    max-width: 420px;
-                    font-family: sans-serif;
-                    text-align: center;
-                ">
-                    <h3 style="margin-top: 0; color: #DC2626; font-size: 18px;">⚠️ Assessment Incomplete</h3>
-                    <p style="font-size: 14px; color: #475569; line-height: 1.5; margin-bottom: 16px;">
-                        You have <b>{missing_count} unanswered question(s)</b>. Click below to jump straight to the first missing item.
-                    </p>
-                    <div style="font-size: 12px; background: #F1F5F9; padding: 8px 12px; border-radius: 6px; color: #334155; margin-bottom: 20px; max-height: 80px; overflow-y: auto; text-align: left;">
-                        <b>Pending Items:</b> {missing_str}
-                    </div>
-                    <button onclick="
-                        document.getElementById('error-popup-overlay').style.display='none';
-                        const target = document.getElementById('q-target-{first_missing}');
-                        if(target) {{ target.scrollIntoView({{ behavior: 'smooth', block: 'center' }}); }}
-                    " style="
-                        background-color: #2563EB;
-                        color: white;
-                        border: none;
-                        padding: 10px 20px;
-                        font-size: 14px;
-                        font-weight: bold;
-                        border-radius: 6px;
-                        cursor: pointer;
-                        width: 100%;
-                    ">Take Me There</button>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
+        st.markdown(f"<div id='q-target-{q_num}'></div>", unsafe_allow_html=True)
+
+        if is_missing:
+            st.markdown(f"<div style='border-left: 4px solid #ef4444; padding-left: 10px; background-color: #fef2f2; margin-top: 10px;'>", unsafe_allow_html=True)
+
+        # Using direct keys without form boundaries prevents hanging
+        answers[idx] = st.radio(
+            f"**Q{q_num}:** {statement}",
+            options=[1, 2, 3, 4, 5],
+            format_func=lambda x: {1: "1 - Strongly Disagree", 2: "2 - Disagree", 3: "3 - Neutral", 4: "4 - Agree", 5: "5 - Strongly Agree"}[x],
+            index=None,
+            horizontal=True,
+            key=f"q_{idx}"
         )
 
-# STEP 2: DASHBOARD & POSITIVE OUTCOMES WHEEL
+        if is_missing:
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("---")
+    
+    if st.button("Submit Assessment", type="primary", use_container_width=True):
+        unanswered_indices = [idx + 1 for idx, v in answers.items() if v is None]
+        
+        if not st.session_state.user_name.strip():
+            st.error("Please enter your Full Name to proceed.")
+        elif len(unanswered_indices) > 0:
+            st.session_state.validation_error = unanswered_indices
+            st.warning(f"⚠️ Assessment Incomplete: You have {len(unanswered_indices)} unanswered question(s). Please review the highlighted fields above.")
+            st.rerun()
+        else:
+            st.session_state.validation_error = []
+            st.session_state.answers = answers
+            st.session_state.submitted = True
+            st.rerun()
+
+# STEP 2: DASHBOARD & REPORT GENERATION
 else:
     theme_scores, theme_classifications, domain_averages, top_5 = calculate_results(st.session_state.answers)
     pdf_bytes = generate_pdf_report(st.session_state.user_name, theme_scores, theme_classifications, domain_averages, top_5)
@@ -496,7 +439,7 @@ else:
             use_container_width=True
         )
 
-    # OPTIONAL EMAIL PROMPT CARD
+    # EMAIL PROMPT CARD
     with st.expander("✉️ Would you like a copy sent to your email?", expanded=True):
         col_email_input, col_email_btn = st.columns([3, 1])
         with col_email_input:
