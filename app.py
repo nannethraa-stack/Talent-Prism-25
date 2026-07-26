@@ -385,7 +385,6 @@ if not st.session_state.submitted:
             q_num = idx + 1
             is_missing = q_num in st.session_state.validation_error
             
-            # Anchor wrapper for auto-scrolling
             st.markdown(f"<div id='q-target-{q_num}'></div>", unsafe_allow_html=True)
 
             if is_missing:
@@ -395,7 +394,7 @@ if not st.session_state.submitted:
                 f"**Q{q_num}:** {statement}",
                 options=[1, 2, 3, 4, 5],
                 format_func=lambda x: {1: "1 - Strongly Disagree", 2: "2 - Disagree", 3: "3 - Neutral", 4: "4 - Agree", 5: "5 - Strongly Agree"}[x],
-                index=None,  # Forces explicit answer
+                index=None,
                 horizontal=True,
                 key=f"q_{idx}"
             )
