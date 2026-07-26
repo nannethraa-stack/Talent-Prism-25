@@ -378,7 +378,7 @@ if not st.session_state.submitted:
         user_name = st.text_input("Full Name *", value="")
 
         st.subheader("2. Self-Report Questionnaire")
-        st.info("Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree) based on how true it is of you.")
+        st.info("Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree). All questions are mandatory.")
 
         answers = {}
         for idx, statement in enumerate(STATEMENTS):
@@ -386,7 +386,7 @@ if not st.session_state.submitted:
                 f"**Q{idx+1}:** {statement}",
                 options=[1, 2, 3, 4, 5],
                 format_func=lambda x: {1: "1 - Strongly Disagree", 2: "2 - Disagree", 3: "3 - Neutral", 4: "4 - Agree", 5: "5 - Strongly Agree"}[x],
-                index=2,
+                index=None,  # No default selection
                 horizontal=True,
                 key=f"q_{idx}"
             )
@@ -394,8 +394,13 @@ if not st.session_state.submitted:
         submit_button = st.form_submit_button("Submit Assessment")
 
         if submit_button:
+            # Check for unselected questions
+            unanswered_count = sum(1 for v in answers.values() if v is None)
+            
             if not user_name.strip():
-                st.error("Please enter your name to proceed.")
+                st.error("Please enter your Full Name to proceed.")
+            elif unanswered_count > 0:
+                st.error(f"Please answer all questions before submitting. You have {unanswered_count} unanswered question(s) remaining.")
             else:
                 st.session_state.user_name = user_name
                 st.session_state.answers = answers
