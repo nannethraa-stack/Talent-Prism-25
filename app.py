@@ -65,91 +65,130 @@ TALENTPRISM_DATA = {
     },
 }
 
-STATEMENTS = [
+# Theme mapping for scoring logic (kept internally)
+STATEMENT_THEMES = [
     # Positive Psychology
-    ("Horizon", "I generally expect good outcomes, even when circumstances are uncertain."),
-    ("Horizon", "When faced with a setback, I quickly start looking for the silver lining."),
-    ("Horizon", "I find it easy to stay hopeful about the future."),
-    ("Valuer", "I regularly notice and value the good things in my life and work."),
-    ("Valuer", "I make a habit of acknowledging others' contributions."),
-    ("Valuer", "I feel a strong sense of appreciation for opportunities that come my way."),
-    ("Seeker", "I actively seek out new knowledge, even outside my immediate responsibilities."),
-    ("Seeker", "I enjoy exploring how things work at a deeper level."),
-    ("Seeker", "I look forward to learning something new almost every day."),
-    ("Spark", "I approach my work and projects with energy and enthusiasm."),
-    ("Spark", "Others often notice my enthusiasm rubbing off on them."),
-    ("Spark", "I rarely feel drained by tasks that genuinely interest me, no matter how long they take."),
+    "Horizon", "Horizon", "Horizon",
+    "Valuer", "Valuer", "Valuer",
+    "Seeker", "Seeker", "Seeker",
+    "Spark", "Spark", "Spark",
     
     # Organizational Psychology
-    ("Helm", "People often look to me to take charge when a decision needs to be made."),
-    ("Helm", "I can rally a group around a shared goal without much difficulty."),
-    ("Helm", "I feel comfortable setting direction for others, even under pressure."),
-    ("Weaver", "I genuinely enjoy working with others to accomplish a shared outcome."),
-    ("Weaver", "I adjust my own approach to help a team succeed as a whole."),
-    ("Weaver", "I find satisfaction in supporting a teammate's success as much as my own."),
-    ("Voice", "I can explain complex ideas in ways that are easy for others to understand."),
-    ("Voice", "I am comfortable presenting my thoughts to a group, large or small."),
-    ("Voice", "People tell me I express myself clearly and persuasively."),
-    ("Bridge", "I naturally notice tension in a group and look for ways to ease it."),
-    ("Bridge", "I try to find common ground rather than take sides in a disagreement."),
-    ("Bridge", "Others often come to me to help mediate disputes."),
-    ("Resonator", "I can sense how someone is feeling even before they say anything."),
-    ("Resonator", "I find it easy to see a situation from another person's perspective."),
-    ("Resonator", "People often say I 'just get' what they're going through."),
-    ("Cultivator", "I notice small signs of potential or improvement in others before they notice it themselves."),
-    ("Cultivator", "I get satisfaction from helping someone else grow or succeed."),
-    ("Cultivator", "I invest time mentoring or coaching others, even without being asked."),
+    "Helm", "Helm", "Helm",
+    "Weaver", "Weaver", "Weaver",
+    "Voice", "Voice", "Voice",
+    "Bridge", "Bridge", "Bridge",
+    "Resonator", "Resonator", "Resonator",
+    "Cultivator", "Cultivator", "Cultivator",
     
     # Industrial/Work Psychology
-    ("Driver", "I feel a strong internal push to accomplish something meaningful every day."),
-    ("Driver", "I set demanding personal targets and work hard to hit them."),
-    ("Driver", "Completing a task well gives me a deep sense of satisfaction."),
-    ("Anchor", "I follow through on commitments even when no one is checking on me."),
-    ("Anchor", "I prefer to have clear structure and routines in my work."),
-    ("Anchor", "People consider me dependable because I deliver what I promise, on time."),
-    ("Flex", "I adjust quickly when plans or priorities shift unexpectedly."),
-    ("Flex", "I stay effective even when working conditions become unpredictable."),
-    ("Flex", "I see change as an opportunity rather than a threat."),
-    ("Steward", "I feel a strong sense of ownership over outcomes, even outside my formal role."),
-    ("Steward", "I hold myself accountable for mistakes rather than deflecting blame."),
-    ("Steward", "When I say I'll do something, I feel psychologically obligated to see it through."),
-    ("Fixer", "I'm drawn to diagnosing what's wrong with a broken process or system."),
-    ("Fixer", "I get genuine satisfaction from fixing something that others have given up on."),
-    ("Fixer", "I can usually identify the root cause of a recurring problem."),
+    "Driver", "Driver", "Driver",
+    "Anchor", "Anchor", "Anchor",
+    "Flex", "Flex", "Flex",
+    "Steward", "Steward", "Steward",
+    "Fixer", "Fixer", "Fixer",
     
     # Cognitive Psychology
-    ("Prism", "I like to break down complex problems into smaller, logical parts."),
-    ("Prism", "I naturally question assumptions and look for supporting evidence."),
-    ("Prism", "I feel most confident in decisions after I've carefully examined the data."),
-    ("Mapper", "I can usually see how different parts of a system affect each other."),
-    ("Mapper", "I enjoy planning several steps ahead rather than reacting in the moment."),
-    ("Mapper", "I often spot patterns or trends that others miss."),
-    ("Forge", "I enjoy coming up with original solutions to difficult problems."),
-    ("Forge", "I can generate multiple possible approaches before settling on one."),
-    ("Forge", "I like experimenting with unconventional ideas, even if they might fail."),
-    ("Visionary", "I frequently imagine how things could look years from now."),
-    ("Visionary", "I enjoy painting a picture of future possibilities for others."),
-    ("Visionary", "Long-range vision comes more naturally to me than short-term details."),
-    ("Archivist", "I like collecting a wide range of information before forming a conclusion."),
-    ("Archivist", "I enjoy hunting down facts, resources, or references relevant to a topic."),
-    ("Archivist", "I retain and connect odd pieces of information that later turn out to be useful."),
+    "Prism", "Prism", "Prism",
+    "Mapper", "Mapper", "Mapper",
+    "Forge", "Forge", "Forge",
+    "Visionary", "Visionary", "Visionary",
+    "Archivist", "Archivist", "Archivist",
     
     # Behavioral Psychology
-    ("Steady", "I stay composed and think clearly under stress."),
-    ("Steady", "I can manage my emotions effectively during setbacks."),
-    ("Steady", "I bounce back quickly after a disappointment or failure."),
-    ("Igniter", "I take action on problems before being asked to."),
-    ("Igniter", "I look for opportunities to improve things without waiting for instructions."),
-    ("Igniter", "I tend to start tasks early rather than waiting until the last moment."),
-    ("Grit", "I keep working toward a goal even when progress is slow."),
-    ("Grit", "I rarely give up on something I've decided is important."),
-    ("Grit", "I stay focused on long-term objectives despite short-term distractions."),
-    ("Catalyst", "I prefer to start acting on an idea rather than analyze it endlessly."),
-    ("Catalyst", "I often push a group from discussion into action."),
-    ("Catalyst", "I get impatient when plans stay theoretical for too long."),
-    ("Contender", "I naturally compare my performance against others and want to come out ahead."),
-    ("Contender", "Competition energizes me rather than stresses me."),
-    ("Contender", "Winning or ranking well matters to me, even in informal situations.")
+    "Steady", "Steady", "Steady",
+    "Igniter", "Igniter", "Igniter",
+    "Grit", "Grit", "Grit",
+    "Catalyst", "Catalyst", "Catalyst",
+    "Contender", "Contender", "Contender"
+]
+
+# Only standard questions shown to the user
+STATEMENTS = [
+    # Positive Psychology
+    "I generally expect good outcomes, even when circumstances are uncertain.",
+    "When faced with a setback, I quickly start looking for the silver lining.",
+    "I find it easy to stay hopeful about the future.",
+    "I regularly notice and value the good things in my life and work.",
+    "I make a habit of acknowledging others' contributions.",
+    "I feel a strong sense of appreciation for opportunities that come my way.",
+    "I actively seek out new knowledge, even outside my immediate responsibilities.",
+    "I enjoy exploring how things work at a deeper level.",
+    "I look forward to learning something new almost every day.",
+    "I approach my work and projects with energy and enthusiasm.",
+    "Others often notice my enthusiasm rubbing off on them.",
+    "I rarely feel drained by tasks that genuinely interest me, no matter how long they take.",
+    
+    # Organizational Psychology
+    "People often look to me to take charge when a decision needs to be made.",
+    "I can rally a group around a shared goal without much difficulty.",
+    "I feel comfortable setting direction for others, even under pressure.",
+    "I genuinely enjoy working with others to accomplish a shared outcome.",
+    "I adjust my own approach to help a team succeed as a whole.",
+    "I find satisfaction in supporting a teammate's success as much as my own.",
+    "I can explain complex ideas in ways that are easy for others to understand.",
+    "I am comfortable presenting my thoughts to a group, large or small.",
+    "People tell me I express myself clearly and persuasively.",
+    "I naturally notice tension in a group and look for ways to ease it.",
+    "I try to find common ground rather than take sides in a disagreement.",
+    "Others often come to me to help mediate disputes.",
+    "I can sense how someone is feeling even before they say anything.",
+    "I find it easy to see a situation from another person's perspective.",
+    "People often say I 'just get' what they're going through.",
+    "I notice small signs of potential or improvement in others before they notice it themselves.",
+    "I get satisfaction from helping someone else grow or succeed.",
+    "I invest time mentoring or coaching others, even without being asked.",
+    
+    # Industrial/Work Psychology
+    "I feel a strong internal push to accomplish something meaningful every day.",
+    "I set demanding personal targets and work hard to hit them.",
+    "Completing a task well gives me a deep sense of satisfaction.",
+    "I follow through on commitments even when no one is checking on me.",
+    "I prefer to have clear structure and routines in my work.",
+    "People consider me dependable because I deliver what I promise, on time.",
+    "I adjust quickly when plans or priorities shift unexpectedly.",
+    "I stay effective even when working conditions become unpredictable.",
+    "I see change as an opportunity rather than a threat.",
+    "I feel a strong sense of ownership over outcomes, even outside my formal role.",
+    "I hold myself accountable for mistakes rather than deflecting blame.",
+    "When I say I'll do something, I feel psychologically obligated to see it through.",
+    "I'm drawn to diagnosing what's wrong with a broken process or system.",
+    "I get genuine satisfaction from fixing something that others have given up on.",
+    "I can usually identify the root cause of a recurring problem.",
+    
+    # Cognitive Psychology
+    "I like to break down complex problems into smaller, logical parts.",
+    "I naturally question assumptions and look for supporting evidence.",
+    "I feel most confident in decisions after I've carefully examined the data.",
+    "I can usually see how different parts of a system affect each other.",
+    "I enjoy planning several steps ahead rather than reacting in the moment.",
+    "I often spot patterns or trends that others miss.",
+    "I enjoy coming up with original solutions to difficult problems.",
+    "I can generate multiple possible approaches before settling on one.",
+    "I like experimenting with unconventional ideas, even if they might fail.",
+    "I frequently imagine how things could look years from now.",
+    "I enjoy painting a picture of future possibilities for others.",
+    "Long-range vision comes more naturally to me than short-term details.",
+    "I like collecting a wide range of information before forming a conclusion.",
+    "I enjoy hunting down facts, resources, or references relevant to a topic.",
+    "I retain and connect odd pieces of information that later turn out to be useful.",
+    
+    # Behavioral Psychology
+    "I stay composed and think clearly under stress.",
+    "I can manage my emotions effectively during setbacks.",
+    "I bounce back quickly after a disappointment or failure.",
+    "I take action on problems before being asked to.",
+    "I look for opportunities to improve things without waiting for instructions.",
+    "I tend to start tasks early rather than waiting until the last moment.",
+    "I keep working toward a goal even when progress is slow.",
+    "I rarely give up on something I've decided is important.",
+    "I stay focused on long-term objectives despite short-term distractions.",
+    "I prefer to start acting on an idea rather than analyze it endlessly.",
+    "I often push a group from discussion into action.",
+    "I get impatient when plans stay theoretical for too long.",
+    "I naturally compare my performance against others and want to come out ahead.",
+    "Competition energizes me rather than stresses me.",
+    "Winning or ranking well matters to me, even in informal situations."
 ]
 
 THEME_TO_DOMAIN = {theme: domain for domain, data in TALENTPRISM_DATA.items() for theme in data["themes"]}
@@ -161,7 +200,7 @@ THEME_TO_DOMAIN = {theme: domain for domain, data in TALENTPRISM_DATA.items() fo
 def calculate_results(answers):
     theme_scores = {theme: 0 for theme in THEME_TO_DOMAIN.keys()}
     for idx, rating in answers.items():
-        theme, _ = STATEMENTS[idx]
+        theme = STATEMENT_THEMES[idx]
         theme_scores[theme] += rating
         
     theme_classifications = {}
@@ -342,7 +381,7 @@ if not st.session_state.submitted:
         st.info("Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree) based on how true it is of you.")
 
         answers = {}
-        for idx, (_, statement) in enumerate(STATEMENTS):
+        for idx, statement in enumerate(STATEMENTS):
             answers[idx] = st.radio(
                 f"**Q{idx+1}:** {statement}",
                 options=[1, 2, 3, 4, 5],
