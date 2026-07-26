@@ -12,10 +12,9 @@ from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer,
 # 1. DATA STRUCTURE & FRAMEWORK DEFINITIONS
 # ==========================================
 
-# 25 Themes grouped into 5 Psychological Domains
 TALENTPRISM_DATA = {
     "Positive Psychology": {
-        "color": "#9A7D0A",  # Gold/Olive
+        "color": "#9A7D0A",
         "themes": {
             "Horizon": "You expect good outcomes ahead, even when circumstances are uncertain.",
             "Valuer": "You notice and openly honor what's good around you.",
@@ -24,7 +23,7 @@ TALENTPRISM_DATA = {
         },
     },
     "Organizational Psychology": {
-        "color": "#1F618D",  # Blue
+        "color": "#1F618D",
         "themes": {
             "Helm": "You naturally take charge and set direction for others.",
             "Weaver": "You bind a group into one functioning team.",
@@ -35,7 +34,7 @@ TALENTPRISM_DATA = {
         },
     },
     "Industrial/Work Psychology": {
-        "color": "#922B21",  # Red/Rust
+        "color": "#922B21",
         "themes": {
             "Driver": "You feel an internal push to accomplish something meaningful every day.",
             "Anchor": "You are the person others can count on to deliver, on time, every time.",
@@ -45,7 +44,7 @@ TALENTPRISM_DATA = {
         },
     },
     "Cognitive Psychology": {
-        "color": "#6C3483",  # Purple
+        "color": "#6C3483",
         "themes": {
             "Prism": "You break complex problems into clear, logical parts.",
             "Mapper": "You see how the moving pieces of a system connect and where they lead.",
@@ -55,7 +54,7 @@ TALENTPRISM_DATA = {
         },
     },
     "Behavioral Psychology": {
-        "color": "#117A65",  # Teal/Green
+        "color": "#117A65",
         "themes": {
             "Steady": "You stay composed and think clearly when pressure rises.",
             "Igniter": "You move on a problem before anyone asks you to.",
@@ -66,7 +65,6 @@ TALENTPRISM_DATA = {
     },
 }
 
-# 75 Statements mapping (3 per theme)
 STATEMENTS = [
     # Positive Psychology
     ("Horizon", "I generally expect good outcomes, even when circumstances are uncertain."),
@@ -154,20 +152,14 @@ STATEMENTS = [
     ("Contender", "Winning or ranking well matters to me, even in informal situations.")
 ]
 
-# Quick domain lookup per theme
-THEME_TO_DOMAIN = {}
-for domain, data in TALENTPRISM_DATA.items():
-    for theme in data["themes"]:
-        THEME_TO_DOMAIN[theme] = domain
+THEME_TO_DOMAIN = {theme: domain for domain, data in TALENTPRISM_DATA.items() for theme in data["themes"]}
 
 # ==========================================
 # 2. HELPER FUNCTIONS: SCORING & CHARTS
 # ==========================================
 
 def calculate_results(answers):
-    """Aggregates 75 ratings into theme scores, classifications, and domain averages."""
     theme_scores = {theme: 0 for theme in THEME_TO_DOMAIN.keys()}
-    
     for idx, rating in answers.items():
         theme, _ = STATEMENTS[idx]
         theme_scores[theme] += rating
@@ -190,15 +182,12 @@ def calculate_results(answers):
         domain_counts[domain] += 1
         
     domain_averages = {d: round(domain_totals[d] / domain_counts[d], 2) for d in TALENTPRISM_DATA.keys()}
-    
-    # Top 5 Signature Strengths
     sorted_themes = sorted(theme_scores.items(), key=lambda x: x[1], reverse=True)
     top_5 = sorted_themes[:5]
     
     return theme_scores, theme_classifications, domain_averages, top_5
 
 def render_strengths_wheel(theme_scores):
-    """Generates an interactive polar bar chart representing the Strengths Wheel."""
     themes = list(theme_scores.keys())
     scores = [theme_scores[t] for t in themes]
     chart_colors = [TALENTPRISM_DATA[THEME_TO_DOMAIN[t]]["color"] for t in themes]
@@ -213,7 +202,6 @@ def render_strengths_wheel(theme_scores):
             opacity=0.85
         )
     )
-    
     fig.update_layout(
         polar=dict(
             radialaxis=dict(visible=True, range=[0, 15], tickfont=dict(size=9)),
@@ -226,11 +214,10 @@ def render_strengths_wheel(theme_scores):
     return fig
 
 # ==========================================
-# 3. PDF GENERATION ENGINE (REPORTLAB)
+# 3. PDF GENERATION ENGINE
 # ==========================================
 
 def generate_pdf_report(candidate_name, theme_scores, theme_classifications, domain_averages, top_5):
-    """Constructs a branded, multi-page PDF assessment report in memory."""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
@@ -239,16 +226,12 @@ def generate_pdf_report(candidate_name, theme_scores, theme_classifications, dom
     subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=11, textColor=colors.HexColor('#566573'), spaceAfter=15)
     h2_style = ParagraphStyle('H2Style', parent=styles['Heading2'], fontSize=14, textColor=colors.HexColor('#1F618D'), spaceBefore=12, spaceAfter=8)
     body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#2C3E50'), leading=13)
-    bold_body = ParagraphStyle('BoldBody', parent=body_style, fontName='Helvetica-Bold')
 
     elements = []
-
-    # Header section
     elements.append(Paragraph("<b>TalentPrism-25 Strengths Assessment</b>", title_style))
     elements.append(Paragraph(f"<b>Candidate:</b> {candidate_name} | <b>Framework:</b> TalentPrism-25 (75 Items)", subtitle_style))
     elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#1F618D'), spaceAfter=15))
 
-    # Top 5 Signature Strengths
     elements.append(Paragraph("Top 5 Signature Strengths", h2_style))
     top_data = [["#", "Theme", "Domain", "Score", "Definition"]]
     for rank, (theme, score) in enumerate(top_5, 1):
@@ -269,7 +252,6 @@ def generate_pdf_report(candidate_name, theme_scores, theme_classifications, dom
     elements.append(t_top)
     elements.append(Spacer(1, 15))
 
-    # Complete Theme Score Matrix
     elements.append(Paragraph("Complete Strengths Matrix (25 Themes)", h2_style))
     matrix_data = [["Domain", "Theme", "Score", "Classification"]]
     
@@ -292,8 +274,7 @@ def generate_pdf_report(candidate_name, theme_scores, theme_classifications, dom
     elements.append(t_matrix)
     elements.append(Spacer(1, 15))
 
-    # Disclaimer
-    disclaimer = ("<i>TalentPrism-25 is an original, independently developed self-reflection framework. "
+    disclaimer = ("<i>TalentPrism-25 is an original self-reflection framework. "
                   "Not affiliated with, endorsed by, or a substitute for Gallup's CliftonStrengths® assessment.</i>")
     elements.append(Paragraph(disclaimer, ParagraphStyle('Disc', parent=body_style, fontSize=7, textColor=colors.gray)))
 
@@ -302,33 +283,32 @@ def generate_pdf_report(candidate_name, theme_scores, theme_classifications, dom
     return buffer.getvalue()
 
 # ==========================================
-# 4. EMAIL SERVICE ENGINE (RESEND)
+# 4. EMAIL SERVICE ENGINE
 # ==========================================
 
-def send_results_email(user_name, user_email, pdf_bytes, top_5):
-    """Dispatches executive email with attached PDF using Resend API."""
+def send_results_email(user_name, target_email, pdf_bytes, top_5):
     api_key = st.secrets.get("RESEND_API_KEY") or os.environ.get("RESEND_API_KEY")
     if not api_key:
-        st.warning("Resend API Key missing. Skipping email dispatch.")
+        st.error("Resend API Key is missing. Check your Render environment settings.")
         return False
 
     resend.api_key = api_key
     top_5_html = "".join([f"<li><b>{theme}</b> ({THEME_TO_DOMAIN[theme]}): {score}/15</li>" for theme, score in top_5])
 
     email_body = f"""
-    <h3>TalentPrism-25 Assessment Results</h3>
+    <h3>TalentPrism-25 Assessment Report</h3>
     <p>Hi {user_name},</p>
-    <p>Thank you for completing the TalentPrism-25 Strengths Assessment. Your results have been computed.</p>
+    <p>Here is your copy of the TalentPrism-25 Strengths Assessment report.</p>
     <h4>Your Top 5 Signature Strengths:</h4>
     <ul>{top_5_html}</ul>
-    <p>Attached to this email is your full diagnostic PDF report.</p>
+    <p>Your full report PDF is attached to this email.</p>
     """
 
     try:
         resend.Emails.send({
             "from": "TalentPrism <onboarding@resend.dev>",
-            "to": [user_email],
-            "subject": f"TalentPrism-25 Assessment Results - {user_name}",
+            "to": [target_email],
+            "subject": f"Your TalentPrism-25 Assessment Report - {user_name}",
             "html": email_body,
             "attachments": [{
                 "filename": f"{user_name.replace(' ', '_')}_TalentPrism_Results.pdf",
@@ -337,14 +317,14 @@ def send_results_email(user_name, user_email, pdf_bytes, top_5):
         })
         return True
     except Exception as e:
-        st.error(f"Email failed to send: {str(e)}")
+        st.error(f"Failed to send email: {str(e)}")
         return False
 
 # ==========================================
 # 5. STREAMLIT UI & WORKFLOW
 # ==========================================
 
-st.set_page_config(page_title="TalentPrism-25 Enterprise Assessment", layout="wide")
+st.set_page_config(page_title="TalentPrism-25 Assessment Portal", layout="wide")
 
 st.title("TalentPrism-25 Assessment Portal")
 st.caption("A 75-Item Strengths Assessment Across Positive, Organizational, Industrial, Cognitive & Behavioral Psychology")
@@ -352,14 +332,11 @@ st.caption("A 75-Item Strengths Assessment Across Positive, Organizational, Indu
 if "submitted" not in st.session_state:
     st.session_state.submitted = False
 
+# STEP 1: QUESTIONNAIRE FORM
 if not st.session_state.submitted:
     with st.form("assessment_form"):
-        st.subheader("1. Participant Information")
-        col_a, col_b = st.columns(2)
-        with col_a:
-            user_name = st.text_input("Full Name *", value="")
-        with col_b:
-            user_email = st.text_input("Email Address *", value="")
+        st.subheader("1. Candidate Details")
+        user_name = st.text_input("Full Name *", value="")
 
         st.subheader("2. Self-Report Questionnaire")
         st.info("Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree) based on how true it is of you.")
@@ -378,44 +355,52 @@ if not st.session_state.submitted:
         submit_button = st.form_submit_button("Submit Assessment")
 
         if submit_button:
-            if not user_name.strip() or not user_email.strip():
-                st.error("Please fill in both Name and Email to view results.")
+            if not user_name.strip():
+                st.error("Please enter your name to proceed.")
             else:
                 st.session_state.user_name = user_name
-                st.session_state.user_email = user_email
                 st.session_state.answers = answers
                 st.session_state.submitted = True
                 st.rerun()
 
+# STEP 2: DASHBOARD & CONDITIONAL EMAIL PROMPT
 else:
-    # Calculate Results
     theme_scores, theme_classifications, domain_averages, top_5 = calculate_results(st.session_state.answers)
     pdf_bytes = generate_pdf_report(st.session_state.user_name, theme_scores, theme_classifications, domain_averages, top_5)
 
-    # Automatically attempt email dispatch once
-    if "email_sent" not in st.session_state:
-        st.session_state.email_sent = send_results_email(
-            st.session_state.user_name, 
-            st.session_state.user_email, 
-            pdf_bytes, 
-            top_5
+    st.success(f"Assessment complete, {st.session_state.user_name}!")
+
+    # Action Toolbar
+    col_dl, col_blank = st.columns([1, 2])
+    with col_dl:
+        st.download_button(
+            label="📥 Instant Download PDF Report",
+            data=pdf_bytes,
+            file_name=f"{st.session_state.user_name.replace(' ', '_')}_TalentPrism_Results.pdf",
+            mime="application/pdf",
+            use_container_width=True
         )
 
-    st.success(f"Assessment complete for {st.session_state.user_name}!")
-    if st.session_state.email_sent:
-        st.info(f"An executive copy of your report has been dispatched to {st.session_state.user_email}.")
+    # OPTIONAL EMAIL PROMPT CARD
+    with st.expander("✉️ Would you like a copy sent to your email?", expanded=True):
+        col_email_input, col_email_btn = st.columns([3, 1])
+        with col_email_input:
+            recipient_email = st.text_input("Enter your email address", placeholder="name@example.com", label_visibility="collapsed")
+        with col_email_btn:
+            send_btn = st.button("Send Report", use_container_width=True)
 
-    # Top Dashboard Actions
-    st.download_button(
-        label="📥 Download PDF Report",
-        data=pdf_bytes,
-        file_name=f"{st.session_state.user_name.replace(' ', '_')}_TalentPrism_Results.pdf",
-        mime="application/pdf"
-    )
+        if send_btn:
+            if not recipient_email.strip() or "@" not in recipient_email:
+                st.warning("Please enter a valid email address.")
+            else:
+                with st.spinner("Dispatching report..."):
+                    success = send_results_email(st.session_state.user_name, recipient_email.strip(), pdf_bytes, top_5)
+                    if success:
+                        st.success(f"Report successfully sent to {recipient_email}!")
 
     st.markdown("---")
 
-    # Visualizations Dashboard
+    # Visual Dashboard
     col_left, col_right = st.columns([1, 1])
 
     with col_left:
@@ -437,5 +422,4 @@ else:
 
     if st.button("Take Assessment Again"):
         st.session_state.submitted = False
-        st.session_state.pop("email_sent", None)
         st.rerun()
