@@ -358,7 +358,7 @@ def send_results_email(user_name, target_email, pdf_bytes, top_5):
         return False
 
 # ==========================================
-# 5. STREAMLIT UI & WORKFLOW (NO FORMS - BULLETPROOF)
+# 5. STREAMLIT UI & WORKFLOW (FORM-FREE)
 # ==========================================
 
 st.set_page_config(page_title="TalentPrism-25 Assessment Portal", layout="wide")
@@ -373,7 +373,7 @@ if "validation_error" not in st.session_state:
 if "user_name" not in st.session_state:
     st.session_state.user_name = ""
 
-# STEP 1: QUESTIONNAIRE INTERFACE (Form-free to prevent locks)
+# STEP 1: QUESTIONNAIRE INTERFACE
 if not st.session_state.submitted:
     st.subheader("1. Candidate Details")
     st.session_state.user_name = st.text_input("Full Name *", value=st.session_state.user_name)
@@ -391,7 +391,6 @@ if not st.session_state.submitted:
         if is_missing:
             st.markdown(f"<div style='border-left: 4px solid #ef4444; padding-left: 10px; background-color: #fef2f2; margin-top: 10px;'>", unsafe_allow_html=True)
 
-        # Using direct keys without form boundaries prevents hanging
         answers[idx] = st.radio(
             f"**Q{q_num}:** {statement}",
             options=[1, 2, 3, 4, 5],
@@ -405,12 +404,14 @@ if not st.session_state.submitted:
             st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("---")
+    st.markdown("<div id='submit-anchor'></div>", unsafe_allow_html=True)
     
     if st.button("Submit Assessment", type="primary", use_container_width=True):
         unanswered_indices = [idx + 1 for idx, v in answers.items() if v is None]
         
         if not st.session_state.user_name.strip():
             st.error("Please enter your Full Name to proceed.")
+            st.rerun()
         elif len(unanswered_indices) > 0:
             st.session_state.validation_error = unanswered_indices
             st.warning(f"⚠️ Assessment Incomplete: You have {len(unanswered_indices)} unanswered question(s). Please review the highlighted fields above.")
