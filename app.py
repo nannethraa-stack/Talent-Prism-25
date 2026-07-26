@@ -380,18 +380,14 @@ if not st.session_state.submitted:
         st.subheader("2. Self-Report Questionnaire")
         st.info("Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree). All questions are mandatory.")
 
-        # DISPLAY TOP VALIDATION BANNER IF UNANSWERED QUESTIONS EXIST
-        if st.session_state.validation_error:
-            st.error(f"⚠️ **Action Required:** Please answer all required items before submitting. You have **{len(st.session_state.validation_error)} unanswered question(s)** remaining.")
-            missing_str = ", ".join([f"Q{q_num}" for q_num in st.session_state.validation_error])
-            st.markdown(f"<div style='background-color:#fef2f2; border:1px solid #ef4444; padding:10px; border-radius:5px; color:#991b1b; margin-bottom:15px;'><b>Missing Questions:</b> {missing_str}</div>", unsafe_allow_html=True)
-
         answers = {}
         for idx, statement in enumerate(STATEMENTS):
             q_num = idx + 1
             is_missing = q_num in st.session_state.validation_error
             
-            # Apply visual warning border if question was skipped
+            # Anchor wrapper for auto-scrolling
+            st.markdown(f"<div id='q-target-{q_num}'></div>", unsafe_allow_html=True)
+
             if is_missing:
                 st.markdown(f"<div style='border-left: 4px solid #ef4444; padding-left: 10px; background-color: #fef2f2; margin-top: 10px;'>", unsafe_allow_html=True)
 
@@ -424,6 +420,64 @@ if not st.session_state.submitted:
                 st.session_state.answers = answers
                 st.session_state.submitted = True
                 st.rerun()
+
+    # POPUP NOTIFICATION & AUTO-SCROLL TO FIRST UNANSWERED QUESTION
+    if not st.session_state.submitted and st.session_state.validation_error:
+        missing_count = len(st.session_state.validation_error)
+        missing_str = ", ".join([f"Q{q_num}" for q_num in st.session_state.validation_error])
+        first_missing = st.session_state.validation_error[0]
+        
+        st.markdown(
+            f"""
+            <div id="error-popup-overlay" style="
+                position: fixed;
+                top: 0; left: 0; width: 100vw; height: 100vh;
+                background-color: rgba(15, 23, 42, 0.4);
+                backdrop-filter: blur(2px);
+                z-index: 999998;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            ">
+                <div style="
+                    background-color: #FFFFFF;
+                    color: #0F172A;
+                    padding: 24px 28px;
+                    border-radius: 12px;
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+                    border-top: 5px solid #EF4444;
+                    width: 90%;
+                    max-width: 420px;
+                    font-family: sans-serif;
+                    text-align: center;
+                ">
+                    <h3 style="margin-top: 0; color: #DC2626; font-size: 18px;">⚠️ Assessment Incomplete</h3>
+                    <p style="font-size: 14px; color: #475569; line-height: 1.5; margin-bottom: 16px;">
+                        You have <b>{missing_count} unanswered question(s)</b>. Click below to jump straight to the first missing item.
+                    </p>
+                    <div style="font-size: 12px; background: #F1F5F9; padding: 8px 12px; border-radius: 6px; color: #334155; margin-bottom: 20px; max-height: 80px; overflow-y: auto; text-align: left;">
+                        <b>Pending Items:</b> {missing_str}
+                    </div>
+                    <button onclick="
+                        document.getElementById('error-popup-overlay').style.display='none';
+                        const target = document.getElementById('q-target-{first_missing}');
+                        if(target) {{ target.scrollIntoView({{ behavior: 'smooth', block: 'center' }}); }}
+                    " style="
+                        background-color: #2563EB;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        font-size: 14px;
+                        font-weight: bold;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        width: 100%;
+                    ">Take Me There</button>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
 # STEP 2: DASHBOARD & POSITIVE OUTCOMES WHEEL
 else:
@@ -467,7 +521,7 @@ else:
     st.markdown(
         f"""
         <div style="background-color: #ecfdf5; border: 1px solid #10b981; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h4 style="color: #065f46; margin-0 0 10px 0;">🌟 Positive Strengths Summary</h4>
+            <h4 style="color: #065f46; margin: 0 0 10px 0;">🌟 Positive Strengths Summary</h4>
             <p style="color: #047857; margin: 0;">
                 You demonstrated <b>{len(dominant_strengths)} Dominant Strengths</b> (scores ≥ 13/15). 
                 Your highest driving domains are highlighted on the TalentPrism Strengths Wheel below.
