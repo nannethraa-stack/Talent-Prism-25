@@ -375,6 +375,25 @@ if "user_name" not in st.session_state:
 
 # STEP 1: QUESTIONNAIRE INTERFACE
 if not st.session_state.submitted:
+    # Anchor point at the very top for error scrolling
+    st.markdown("<div id='top-error-anchor'></div>", unsafe_allow_html=True)
+
+    # Render error messages at the TOP so they are immediately visible
+    if st.session_state.validation_error:
+        st.warning(f"⚠️ Assessment Incomplete: You have {len(st.session_state.validation_error)} unanswered question(s). Please review the highlighted fields below.")
+        # JavaScript to force window jump to top
+        st.markdown(
+            """
+            <script>
+                const element = document.getElementById('top-error-anchor');
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+
     st.subheader("1. Candidate Details")
     st.session_state.user_name = st.text_input("Full Name *", value=st.session_state.user_name)
 
@@ -386,10 +405,8 @@ if not st.session_state.submitted:
         q_num = idx + 1
         is_missing = q_num in st.session_state.validation_error
         
-        st.markdown(f"<div id='q-target-{q_num}'></div>", unsafe_allow_html=True)
-
         if is_missing:
-            st.markdown(f"<div style='border-left: 4px solid #ef4444; padding-left: 10px; background-color: #fef2f2; margin-top: 10px;'>", unsafe_allow_html=True)
+            st.markdown(f"<div style='border-left: 4px solid #ef4444; padding-left: 10px; background-color: #fef2f2; margin-top: 10px; padding-top: 5px; padding-bottom: 5px;'>", unsafe_allow_html=True)
 
         answers[idx] = st.radio(
             f"**Q{q_num}:** {statement}",
@@ -404,17 +421,15 @@ if not st.session_state.submitted:
             st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown("<div id='submit-anchor'></div>", unsafe_allow_html=True)
     
     if st.button("Submit Assessment", type="primary", use_container_width=True):
         unanswered_indices = [idx + 1 for idx, v in answers.items() if v is None]
         
         if not st.session_state.user_name.strip():
-            st.error("Please enter your Full Name to proceed.")
+            st.session_state.validation_error = [-1] # Flag for name missing
             st.rerun()
         elif len(unanswered_indices) > 0:
             st.session_state.validation_error = unanswered_indices
-            st.warning(f"⚠️ Assessment Incomplete: You have {len(unanswered_indices)} unanswered question(s). Please review the highlighted fields above.")
             st.rerun()
         else:
             st.session_state.validation_error = []
