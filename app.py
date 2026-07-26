@@ -342,9 +342,9 @@ if not st.session_state.submitted:
         st.info("Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree) based on how true it is of you.")
 
         answers = {}
-        for idx, (theme, statement) in enumerate(STATEMENTS):
+        for idx, (_, statement) in enumerate(STATEMENTS):
             answers[idx] = st.radio(
-                f"**Q{idx+1} ({theme}):** {statement}",
+                f"**Q{idx+1}:** {statement}",
                 options=[1, 2, 3, 4, 5],
                 format_func=lambda x: {1: "1 - Strongly Disagree", 2: "2 - Disagree", 3: "3 - Neutral", 4: "4 - Agree", 5: "5 - Strongly Agree"}[x],
                 index=2,
