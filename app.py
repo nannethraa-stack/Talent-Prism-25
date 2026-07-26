@@ -65,7 +65,6 @@ TALENTPRISM_DATA = {
     },
 }
 
-# Theme mapping for scoring logic (kept internally)
 STATEMENT_THEMES = [
     # Positive Psychology
     "Horizon", "Horizon", "Horizon",
@@ -103,7 +102,6 @@ STATEMENT_THEMES = [
     "Contender", "Contender", "Contender"
 ]
 
-# Only standard questions shown to the user
 STATEMENTS = [
     # Positive Psychology
     "I generally expect good outcomes, even when circumstances are uncertain.",
@@ -328,7 +326,7 @@ def generate_pdf_report(candidate_name, theme_scores, theme_classifications, dom
 def send_results_email(user_name, target_email, pdf_bytes, top_5):
     api_key = st.secrets.get("RESEND_API_KEY") or os.environ.get("RESEND_API_KEY")
     if not api_key:
-        st.error("Resend API Key is missing. Check your Render environment settings.")
+        st.error("Resend API Key is missing. Check environment settings.")
         return False
 
     resend.api_key = api_key
@@ -370,44 +368,64 @@ st.caption("A 75-Item Strengths Assessment Across Positive, Organizational, Indu
 
 if "submitted" not in st.session_state:
     st.session_state.submitted = False
+if "validation_error" not in st.session_state:
+    st.session_state.validation_error = []
 
 # STEP 1: QUESTIONNAIRE FORM
 if not st.session_state.submitted:
     with st.form("assessment_form"):
         st.subheader("1. Candidate Details")
-        user_name = st.text_input("Full Name *", value="")
+        user_name = st.text_input("Full Name *", value=st.session_state.get("user_name", ""))
 
         st.subheader("2. Self-Report Questionnaire")
         st.info("Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree). All questions are mandatory.")
 
+        # DISPLAY TOP VALIDATION BANNER IF UNANSWERED QUESTIONS EXIST
+        if st.session_state.validation_error:
+            st.error(f"⚠️ **Action Required:** Please answer all required items before submitting. You have **{len(st.session_state.validation_error)} unanswered question(s)** remaining.")
+            missing_str = ", ".join([f"Q{q_num}" for q_num in st.session_state.validation_error])
+            st.markdown(f"<div style='background-color:#fef2f2; border:1px solid #ef4444; padding:10px; border-radius:5px; color:#991b1b; margin-bottom:15px;'><b>Missing Questions:</b> {missing_str}</div>", unsafe_allow_html=True)
+
         answers = {}
         for idx, statement in enumerate(STATEMENTS):
+            q_num = idx + 1
+            is_missing = q_num in st.session_state.validation_error
+            
+            # Apply visual warning border if question was skipped
+            if is_missing:
+                st.markdown(f"<div style='border-left: 4px solid #ef4444; padding-left: 10px; background-color: #fef2f2; margin-top: 10px;'>", unsafe_allow_html=True)
+
             answers[idx] = st.radio(
-                f"**Q{idx+1}:** {statement}",
+                f"**Q{q_num}:** {statement}",
                 options=[1, 2, 3, 4, 5],
                 format_func=lambda x: {1: "1 - Strongly Disagree", 2: "2 - Disagree", 3: "3 - Neutral", 4: "4 - Agree", 5: "5 - Strongly Agree"}[x],
-                index=None,  # No default selection
+                index=None,  # Forces explicit answer
                 horizontal=True,
                 key=f"q_{idx}"
             )
 
+            if is_missing:
+                st.markdown("</div>", unsafe_allow_html=True)
+
         submit_button = st.form_submit_button("Submit Assessment")
 
         if submit_button:
-            # Check for unselected questions
-            unanswered_count = sum(1 for v in answers.values() if v is None)
+            unanswered_indices = [idx + 1 for idx, v in answers.items() if v is None]
             
             if not user_name.strip():
                 st.error("Please enter your Full Name to proceed.")
-            elif unanswered_count > 0:
-                st.error(f"Please answer all questions before submitting. You have {unanswered_count} unanswered question(s) remaining.")
+            elif len(unanswered_indices) > 0:
+                st.session_state.validation_error = unanswered_indices
+                st.session_state.user_name = user_name
+                st.rerun()
             else:
+                st.session_state.validation_error = []
                 st.session_state.user_name = user_name
                 st.session_state.answers = answers
                 st.session_state.submitted = True
                 st.rerun()
 
-# STEP 2: DASHBOARD & CONDITIONAL EMAIL PROMPT
+# STEP 2: DASHBOARD & POSITIVE OUTCOMES WHEEL
 else:
     theme_scores, theme_classifications, domain_averages, top_5 = calculate_results(st.session_state.answers)
     pdf_bytes = generate_pdf_report(st.session_state.user_name, theme_scores, theme_classifications, domain_averages, top_5)
@@ -444,6 +462,21 @@ else:
 
     st.markdown("---")
 
+    # POSITIVE OUTCOMES HIGHLIGHT BANNER
+    dominant_strengths = [t for t, c in theme_classifications.items() if c == "Dominant Strength"]
+    st.markdown(
+        f"""
+        <div style="background-color: #ecfdf5; border: 1px solid #10b981; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h4 style="color: #065f46; margin-0 0 10px 0;">🌟 Positive Strengths Summary</h4>
+            <p style="color: #047857; margin: 0;">
+                You demonstrated <b>{len(dominant_strengths)} Dominant Strengths</b> (scores ≥ 13/15). 
+                Your highest driving domains are highlighted on the TalentPrism Strengths Wheel below.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
     # Visual Dashboard
     col_left, col_right = st.columns([1, 1])
 
@@ -466,4 +499,5 @@ else:
 
     if st.button("Take Assessment Again"):
         st.session_state.submitted = False
+        st.session_state.validation_error = []
         st.rerun()
