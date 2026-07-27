@@ -11,7 +11,6 @@ from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer,
 # ==========================================
 # 1. DATA STRUCTURE & FRAMEWORK DEFINITIONS
 # ==========================================
-
 TALENTPRISM_DATA = {
     "Positive Psychology": {
         "color": "#9A7D0A",
@@ -71,7 +70,7 @@ STATEMENT_THEMES = [
     "Valuer", "Valuer", "Valuer",
     "Seeker", "Seeker", "Seeker",
     "Spark", "Spark", "Spark",
-    
+   
     # Organizational Psychology
     "Helm", "Helm", "Helm",
     "Weaver", "Weaver", "Weaver",
@@ -79,21 +78,21 @@ STATEMENT_THEMES = [
     "Bridge", "Bridge", "Bridge",
     "Resonator", "Resonator", "Resonator",
     "Cultivator", "Cultivator", "Cultivator",
-    
+   
     # Industrial/Work Psychology
     "Driver", "Driver", "Driver",
     "Anchor", "Anchor", "Anchor",
     "Flex", "Flex", "Flex",
     "Steward", "Steward", "Steward",
     "Fixer", "Fixer", "Fixer",
-    
+   
     # Cognitive Psychology
     "Prism", "Prism", "Prism",
     "Mapper", "Mapper", "Mapper",
     "Forge", "Forge", "Forge",
     "Visionary", "Visionary", "Visionary",
     "Archivist", "Archivist", "Archivist",
-    
+   
     # Behavioral Psychology
     "Steady", "Steady", "Steady",
     "Igniter", "Igniter", "Igniter",
@@ -116,7 +115,7 @@ STATEMENTS = [
     "I approach my work and projects with energy and enthusiasm.",
     "Others often notice my enthusiasm rubbing off on them.",
     "I rarely feel drained by tasks that genuinely interest me, no matter how long they take.",
-    
+   
     # Organizational Psychology
     "People often look to me to take charge when a decision needs to be made.",
     "I can rally a group around a shared goal without much difficulty.",
@@ -136,7 +135,7 @@ STATEMENTS = [
     "I notice small signs of potential or improvement in others before they notice it themselves.",
     "I get satisfaction from helping someone else grow or succeed.",
     "I invest time mentoring or coaching others, even without being asked.",
-    
+   
     # Industrial/Work Psychology
     "I feel a strong internal push to accomplish something meaningful every day.",
     "I set demanding personal targets and work hard to hit them.",
@@ -153,7 +152,7 @@ STATEMENTS = [
     "I'm drawn to diagnosing what's wrong with a broken process or system.",
     "I get genuine satisfaction from fixing something that others have given up on.",
     "I can usually identify the root cause of a recurring problem.",
-    
+   
     # Cognitive Psychology
     "I like to break down complex problems into smaller, logical parts.",
     "I naturally question assumptions and look for supporting evidence.",
@@ -170,7 +169,7 @@ STATEMENTS = [
     "I like collecting a wide range of information before forming a conclusion.",
     "I enjoy hunting down facts, resources, or references relevant to a topic.",
     "I retain and connect odd pieces of information that later turn out to be useful.",
-    
+   
     # Behavioral Psychology
     "I stay composed and think clearly under stress.",
     "I can manage my emotions effectively during setbacks.",
@@ -194,13 +193,12 @@ THEME_TO_DOMAIN = {theme: domain for domain, data in TALENTPRISM_DATA.items() fo
 # ==========================================
 # 2. HELPER FUNCTIONS: SCORING & CHARTS
 # ==========================================
-
 def calculate_results(answers):
     theme_scores = {theme: 0 for theme in THEME_TO_DOMAIN.keys()}
     for idx, rating in answers.items():
         theme = STATEMENT_THEMES[idx]
         theme_scores[theme] += rating
-        
+       
     theme_classifications = {}
     for theme, score in theme_scores.items():
         if score >= 13:
@@ -217,11 +215,11 @@ def calculate_results(answers):
         domain = THEME_TO_DOMAIN[theme]
         domain_totals[domain] += score
         domain_counts[domain] += 1
-        
+       
     domain_averages = {d: round(domain_totals[d] / domain_counts[d], 2) for d in TALENTPRISM_DATA.keys()}
     sorted_themes = sorted(theme_scores.items(), key=lambda x: x[1], reverse=True)
     top_5 = sorted_themes[:5]
-    
+   
     return theme_scores, theme_classifications, domain_averages, top_5
 
 def render_strengths_wheel(theme_scores):
@@ -253,12 +251,11 @@ def render_strengths_wheel(theme_scores):
 # ==========================================
 # 3. PDF GENERATION ENGINE
 # ==========================================
-
 def generate_pdf_report(candidate_name, theme_scores, theme_classifications, domain_averages, top_5):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
-    
+   
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor('#1A252C'), spaceAfter=6)
     subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=11, textColor=colors.HexColor('#566573'), spaceAfter=15)
     h2_style = ParagraphStyle('H2Style', parent=styles['Heading2'], fontSize=14, textColor=colors.HexColor('#1F618D'), spaceBefore=12, spaceAfter=8)
@@ -291,7 +288,7 @@ def generate_pdf_report(candidate_name, theme_scores, theme_classifications, dom
 
     elements.append(Paragraph("Complete Strengths Matrix (25 Themes)", h2_style))
     matrix_data = [["Domain", "Theme", "Score", "Classification"]]
-    
+   
     for domain, data in TALENTPRISM_DATA.items():
         for theme in data["themes"].keys():
             score = theme_scores[theme]
@@ -322,7 +319,6 @@ def generate_pdf_report(candidate_name, theme_scores, theme_classifications, dom
 # ==========================================
 # 4. EMAIL SERVICE ENGINE
 # ==========================================
-
 def send_results_email(user_name, target_email, pdf_bytes, top_5):
     api_key = st.secrets.get("RESEND_API_KEY") or os.environ.get("RESEND_API_KEY")
     if not api_key:
@@ -360,9 +356,7 @@ def send_results_email(user_name, target_email, pdf_bytes, top_5):
 # ==========================================
 # 5. STREAMLIT UI & WORKFLOW (FORM-FREE)
 # ==========================================
-
 st.set_page_config(page_title="TalentPrism-25 Assessment Portal", layout="wide")
-
 st.title("TalentPrism-25 Assessment Portal")
 st.caption("A 75-Item Strengths Assessment Across Positive, Organizational, Industrial, Cognitive & Behavioral Psychology")
 
@@ -372,67 +366,111 @@ if "validation_error" not in st.session_state:
     st.session_state.validation_error = []
 if "user_name" not in st.session_state:
     st.session_state.user_name = ""
+if "show_validation_dialog" not in st.session_state:
+    st.session_state.show_validation_dialog = False
+if "unanswered_list" not in st.session_state:
+    st.session_state.unanswered_list = []
+
+# ---------- DIALOG DEFINITION ----------
+@st.dialog("⚠️ Assessment Incomplete", width="large")
+def validation_dialog():
+    st.markdown("**Please complete the following before submitting:**")
+    st.markdown("---")
+    
+    if -1 in st.session_state.unanswered_list:
+        st.error("• **Full Name** is required.")
+    
+    question_numbers = [q for q in st.session_state.unanswered_list if q > 0]
+    if question_numbers:
+        st.warning(f"**{len(question_numbers)} question(s) still unanswered:**")
+        # Show in a clean multi-column list for readability
+        cols = st.columns(5)
+        for i, q in enumerate(sorted(question_numbers)):
+            cols[i % 5].markdown(f"**Q{q}**")
+    
+    st.markdown("---")
+    st.info("Scroll down to the highlighted questions (red border) and answer them, then click **Submit Assessment** again.")
+    
+    if st.button("Got it – take me back", type="primary", use_container_width=True):
+        st.session_state.show_validation_dialog = False
+        st.rerun()
 
 # STEP 1: QUESTIONNAIRE INTERFACE
 if not st.session_state.submitted:
-    # Anchor point at the very top for error scrolling
-    st.markdown("<div id='top-error-anchor'></div>", unsafe_allow_html=True)
+    # Trigger the dialog if needed
+    if st.session_state.show_validation_dialog:
+        validation_dialog()
 
-    # Render error messages at the TOP so they are immediately visible
+    # Anchor + top warning (kept for visibility while scrolling)
+    st.markdown("<div id='top-error-anchor'></div>", unsafe_allow_html=True)
+    
     if st.session_state.validation_error:
-        st.warning(f"⚠️ Assessment Incomplete: You have {len(st.session_state.validation_error)} unanswered question(s). Please review the highlighted fields below.")
-        # JavaScript to force window jump to top
-        st.markdown(
-            """
-            <script>
-                const element = document.getElementById('top-error-anchor');
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            </script>
-            """,
-            unsafe_allow_html=True
-        )
+        missing_count = len([x for x in st.session_state.validation_error if x > 0])
+        name_missing = -1 in st.session_state.validation_error
+        msg = []
+        if name_missing:
+            msg.append("Full Name")
+        if missing_count:
+            msg.append(f"{missing_count} question(s)")
+        st.warning(f"⚠️ Assessment Incomplete: Missing {', '.join(msg)}. See the dialog for details and the highlighted fields below.")
 
     st.subheader("1. Candidate Details")
     st.session_state.user_name = st.text_input("Full Name *", value=st.session_state.user_name)
 
     st.subheader("2. Self-Report Questionnaire")
-    st.info("Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree). All questions are mandatory.")
+    st.info("Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree). **All questions are mandatory.**")
 
     answers = {}
     for idx, statement in enumerate(STATEMENTS):
         q_num = idx + 1
         is_missing = q_num in st.session_state.validation_error
-        
+
         if is_missing:
-            st.markdown(f"<div style='border-left: 4px solid #ef4444; padding-left: 10px; background-color: #fef2f2; margin-top: 10px; padding-top: 5px; padding-bottom: 5px;'>", unsafe_allow_html=True)
+            st.markdown(
+                "<div style='border-left: 4px solid #ef4444; padding-left: 10px; "
+                "background-color: #fef2f2; margin-top: 10px; padding-top: 5px; padding-bottom: 5px;'>",
+                unsafe_allow_html=True,
+            )
 
         answers[idx] = st.radio(
             f"**Q{q_num}:** {statement}",
             options=[1, 2, 3, 4, 5],
-            format_func=lambda x: {1: "1 - Strongly Disagree", 2: "2 - Disagree", 3: "3 - Neutral", 4: "4 - Agree", 5: "5 - Strongly Agree"}[x],
+            format_func=lambda x: {
+                1: "1 - Strongly Disagree",
+                2: "2 - Disagree",
+                3: "3 - Neutral",
+                4: "4 - Agree",
+                5: "5 - Strongly Agree",
+            }[x],
             index=None,
             horizontal=True,
-            key=f"q_{idx}"
+            key=f"q_{idx}",
         )
 
         if is_missing:
             st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("---")
-    
+
     if st.button("Submit Assessment", type="primary", use_container_width=True):
-        unanswered_indices = [idx + 1 for idx, v in answers.items() if v is None]
-        
-        if not st.session_state.user_name.strip():
-            st.session_state.validation_error = [-1] # Flag for name missing
-            st.rerun()
-        elif len(unanswered_indices) > 0:
-            st.session_state.validation_error = unanswered_indices
+        unanswered = [idx + 1 for idx, v in answers.items() if v is None]
+        name_missing = not st.session_state.user_name.strip()
+
+        if name_missing or unanswered:
+            error_list = []
+            if name_missing:
+                error_list.append(-1)
+            error_list.extend(unanswered)
+
+            st.session_state.validation_error = error_list
+            st.session_state.unanswered_list = error_list
+            st.session_state.show_validation_dialog = True
             st.rerun()
         else:
+            # Everything answered – proceed
             st.session_state.validation_error = []
+            st.session_state.unanswered_list = []
+            st.session_state.show_validation_dialog = False
             st.session_state.answers = answers
             st.session_state.submitted = True
             st.rerun()
@@ -481,7 +519,7 @@ else:
         <div style="background-color: #ecfdf5; border: 1px solid #10b981; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
             <h4 style="color: #065f46; margin: 0 0 10px 0;">🌟 Positive Strengths Summary</h4>
             <p style="color: #047857; margin: 0;">
-                You demonstrated <b>{len(dominant_strengths)} Dominant Strengths</b> (scores ≥ 13/15). 
+                You demonstrated <b>{len(dominant_strengths)} Dominant Strengths</b> (scores ≥ 13/15).
                 Your highest driving domains are highlighted on the TalentPrism Strengths Wheel below.
             </p>
         </div>
@@ -491,7 +529,6 @@ else:
 
     # Visual Dashboard
     col_left, col_right = st.columns([1, 1])
-
     with col_left:
         st.subheader("Your Top 5 Signature Strengths")
         for rank, (theme, score) in enumerate(top_5, 1):
@@ -512,4 +549,6 @@ else:
     if st.button("Take Assessment Again"):
         st.session_state.submitted = False
         st.session_state.validation_error = []
+        st.session_state.unanswered_list = []
+        st.session_state.show_validation_dialog = False
         st.rerun()
