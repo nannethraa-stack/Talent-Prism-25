@@ -472,6 +472,7 @@ def _add_pdf_column():
         conn.close()
 
 
+@st.cache_resource
 def init_db():
     conn = _get_conn()
     try:
@@ -480,6 +481,7 @@ def init_db():
     finally:
         conn.close()
     _add_pdf_column()
+    return True
 
 
 def _fetch_rows(conn, sql):
@@ -617,9 +619,14 @@ def render_admin():
     st.button("⬅️ Back to Assessment", use_container_width=True, on_click=reset_session)
 
 
-def render_questions(questions, form_key):
-    """Render questions as cards with a tick-mark scale and per-question flywheel."""
-    values = {}
+@st.fragment
+def render_questions_options(questions, form_key):
+    """Render the option buttons for every question.
+
+    Fragment: an option click re-renders only this block (fast) instead of
+    the whole app. Selections are stored in session_state; the parent step
+    reads them when "Continue" is clicked.
+    """
     for idx, (qid, text) in enumerate(questions, start=1):
         current = st.session_state.get(f"{form_key}_{qid}")
         with st.container(border=True):
@@ -637,14 +644,21 @@ def render_questions(questions, form_key):
                     else:
                         if st.button(str(v), key=f"{form_key}_{qid}_v{v}", use_container_width=True):
                             st.session_state[f"{form_key}_{qid}"] = v
-                            st.rerun()
             st.markdown(
                 f"<div class='scale-labels'>"
                 f"<span>Strongly Disagree</span><span>Disagree</span><span>Neutral</span>"
                 f"<span>Agree</span><span>Strongly Agree</span></div>",
                 unsafe_allow_html=True,
             )
-        values[qid] = current
+
+
+def render_questions(questions, form_key):
+    """Render question option cards (fast fragment) plus a Continue button."""
+    render_questions_options(questions, form_key)
+    values = {
+        qid: st.session_state.get(f"{form_key}_{qid}")
+        for qid, _text in questions
+    }
     submitted = st.button("Continue", type="primary", use_container_width=True)
     return submitted, values
 
