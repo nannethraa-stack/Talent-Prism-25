@@ -6,8 +6,12 @@ Run with:  streamlit run talentprism_app.py
 """
 
 import io
+import json
 import math
+import os
+import sqlite3
 from datetime import datetime
+from pathlib import Path
 
 import streamlit as st
 from reportlab.lib import colors
@@ -359,6 +363,258 @@ def reset_session():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.rerun()
+
+
+# ---------------------------------------------------------------------------
+# Results database (silent capture; admin-only view)
+# Supports SQLite locally and hosted Postgres in production (DATABASE_URL),
+# so stored results survive restarts and redeploys.
+# ---------------------------------------------------------------------------
+DB_PATH = Path(__file__).parent / "talentprism_results.db"
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+ADMIN_PASSWORD = os.environ.get("TALENTPRISM_ADMIN_KEY", "talentprism-admin")
+
+_SCHEMA = """
+CREATE TABLE IF NOT EXISTS assessments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    candidate_name TEXT NOT NULL DEFAULT '',
+    candidate_org TEXT NOT NULL DEFAULT '',
+    pos INTEGER NOT NULL DEFAULT 0,
+    org INTEGER NOT NULL DEFAULT 0,
+    ind INTEGER NOT NULL DEFAULT 0,
+    cog INTEGER NOT NULL DEFAULT 0,
+    beh INTEGER NOT NULL DEFAULT 0,
+    state_pos TEXT NOT NULL DEFAULT '',
+    state_org TEXT NOT NULL DEFAULT '',
+    state_ind TEXT NOT NULL DEFAULT '',
+    state_cog TEXT NOT NULL DEFAULT '',
+    active_set TEXT NOT NULL DEFAULT '',
+    overall INTEGER NOT NULL DEFAULT 0,
+    top5_json TEXT NOT NULL DEFAULT '[]',
+    pdf_blob BLOB
+)
+"""
+
+_PG_SCHEMA = """
+CREATE TABLE IF NOT EXISTS assessments (
+    id SERIAL PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    candidate_name TEXT NOT NULL DEFAULT '',
+    candidate_org TEXT NOT NULL DEFAULT '',
+    pos INTEGER NOT NULL DEFAULT 0,
+    org INTEGER NOT NULL DEFAULT 0,
+    ind INTEGER NOT NULL DEFAULT 0,
+    cog INTEGER NOT NULL DEFAULT 0,
+    beh INTEGER NOT NULL DEFAULT 0,
+    state_pos TEXT NOT NULL DEFAULT '',
+    state_org TEXT NOT NULL DEFAULT '',
+    state_ind TEXT NOT NULL DEFAULT '',
+    state_cog TEXT NOT NULL DEFAULT '',
+    active_set TEXT NOT NULL DEFAULT '',
+    overall INTEGER NOT NULL DEFAULT 0,
+    top5_json TEXT NOT NULL DEFAULT '[]',
+    pdf_blob BYTEA
+)
+"""
+
+_INSERT = """
+INSERT INTO assessments (
+    created_at, candidate_name, candidate_org,
+    pos, org, ind, cog, beh,
+    state_pos, state_org, state_ind, state_cog,
+    active_set, overall, top5_json, pdf_blob
+) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph},
+          {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+"""
+
+_PG_INSERT = """
+INSERT INTO assessments (
+    created_at, candidate_name, candidate_org,
+    pos, org, ind, cog, beh,
+    state_pos, state_org, state_ind, state_cog,
+    active_set, overall, top5_json, pdf_blob
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+"""
+
+
+def _using_pg() -> bool:
+    return bool(DATABASE_URL)
+
+
+def _get_conn():
+    if _using_pg():
+        import psycopg
+
+        return psycopg.connect(DATABASE_URL)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _add_pdf_column():
+    """Backfill the pdf_blob column on databases created before it existed."""
+    conn = _get_conn()
+    try:
+        with conn:
+            if _using_pg():
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "ALTER TABLE assessments ADD COLUMN IF NOT EXISTS pdf_blob BYTEA"
+                    )
+            else:
+                cols = [r["name"] for r in conn.execute("PRAGMA table_info(assessments)").fetchall()]
+                if "pdf_blob" not in cols:
+                    conn.execute("ALTER TABLE assessments ADD COLUMN pdf_blob BLOB")
+    except Exception:
+        pass  # table may not exist yet; init_db creates it
+    finally:
+        conn.close()
+
+
+def init_db():
+    conn = _get_conn()
+    try:
+        with conn:
+            conn.execute(_PG_SCHEMA if _using_pg() else _SCHEMA)
+    finally:
+        conn.close()
+    _add_pdf_column()
+
+
+def _fetch_rows(conn, sql):
+    if _using_pg():
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            cols = [d.name for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+    return [dict(r) for r in conn.execute(sql).fetchall()]
+
+
+def save_assessment():
+    """Persist the current session's result. Called once at report time."""
+    if st.session_state.get("_result_saved"):
+        return
+    top5 = [t["name"] for t in build_theme_scores()[:5]]
+    try:
+        pdf_bytes = build_pdf()
+    except Exception:
+        pdf_bytes = None
+    row = (
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        st.session_state.get("candidate_name", ""),
+        st.session_state.get("candidate_org", ""),
+        st.session_state.get("pos", 0),
+        st.session_state.get("org", 0),
+        st.session_state.get("ind", 0),
+        st.session_state.get("cog", 0),
+        st.session_state.get("beh", 0),
+        st.session_state.get("state_pos", ""),
+        st.session_state.get("state_org", ""),
+        st.session_state.get("state_ind", ""),
+        st.session_state.get("state_cog", ""),
+        st.session_state.get("active_set", ""),
+        st.session_state.get("_overall", 0),
+        json.dumps(top5),
+        pdf_bytes,
+    )
+    conn = _get_conn()
+    try:
+        with conn:
+            if _using_pg():
+                with conn.cursor() as cur:
+                    cur.execute(_PG_INSERT, row)
+            else:
+                conn.execute(_INSERT.format(ph="?"), row)
+    finally:
+        conn.close()
+    st.session_state["_result_saved"] = True
+
+
+def load_assessments():
+    conn = _get_conn()
+    try:
+        rows = _fetch_rows(conn, "SELECT * FROM assessments ORDER BY id DESC")
+    finally:
+        conn.close()
+    return rows
+
+
+def render_admin():
+    st.markdown(
+        "<div style='text-align:center;border-bottom:1px solid #2c2c2e;padding-bottom:10px;margin-bottom:18px'>"
+        "<h1 style='margin:0 0 6px 0;color:#ffffff'>TalentPrism Results</h1>"
+        "<p style='margin:0;color:#8e8e93'>Stored assessment database</p></div>",
+        unsafe_allow_html=True,
+    )
+    key = st.text_input("Admin key", type="password")
+    if not key:
+        st.info("Enter the admin key to view results.", icon="🔒")
+        return
+    if key != ADMIN_PASSWORD:
+        st.error("Incorrect admin key.", icon="🔒")
+        return
+    rows = load_assessments()
+    st.success(f"{len(rows)} assessment(s) stored in the database.", icon="✅")
+    if not rows:
+        st.info("No assessments captured yet.")
+        return
+    display = []
+    for r in rows:
+        top5 = ", ".join(json.loads(r["top5_json"] or "[]"))
+        display.append({
+            "ID": r["id"],
+            "Date": r["created_at"],
+            "Name": r["candidate_name"],
+            "Organisation": r["candidate_org"],
+            "Overall": f"{r['overall']}%",
+            "Track": r["active_set"],
+            "Pos": r["pos"],
+            "Org": r["org"],
+            "Ind": r["ind"],
+            "Cog": r["cog"],
+            "Beh": r["beh"],
+            "Top 5": top5,
+            "PDF": "Yes" if r.get("pdf_blob") else "No",
+        })
+    st.dataframe(display, use_container_width=True, hide_index=True)
+
+    st.markdown("#### 📄 Download PDF reports")
+    for r in rows:
+        blob = r.get("pdf_blob")
+        if not blob:
+            continue
+        name = r["candidate_name"] or f"candidate_{r['id']}"
+        safe = "".join(c for c in name if c.isalnum() or c in " _-").strip() or f"candidate_{r['id']}"
+        fname = f"TalentPrism_{safe}_{r['id']}.pdf"
+        c1, c2 = st.columns([0.25, 3.75])
+        c1.download_button(
+            f"PDF #{r['id']}",
+            data=bytes(blob),
+            file_name=fname,
+            mime="application/pdf",
+            use_container_width=True,
+            key=f"pdf_{r['id']}",
+        )
+        c2.caption(f"{fname} — {r['created_at']}")
+
+    csv = "id,created_at,candidate_name,candidate_org,overall,active_set,pos,org,ind,cog,beh,state_pos,state_org,state_ind,state_cog,top5\n"
+    for r in rows:
+        top5 = "; ".join(json.loads(r["top5_json"] or "[]"))
+        csv += ",".join(
+            str(r[k]) for k in
+            ["id", "created_at", "candidate_name", "candidate_org", "overall",
+             "active_set", "pos", "org", "ind", "cog", "beh",
+             "state_pos", "state_org", "state_ind", "state_cog"]
+        ) + f",\"{top5}\"\n"
+    st.download_button(
+        "⬇️ Download CSV",
+        data=csv,
+        file_name="talentprism_results.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+    st.button("⬅️ Back to Assessment", use_container_width=True, on_click=reset_session)
 
 
 def render_questions(questions, form_key):
@@ -787,8 +1043,11 @@ def step6():
     )
     total_possible = 75 + 50 + 50 + 35 + 50
     overall = round((pos + org + ind + cog + beh) / total_possible * 100)
+    st.session_state["_overall"] = overall
     themes = build_theme_scores()
     top5 = themes[:5]
+
+    save_assessment()
 
     guide_rows = [
         ("Score Range", "Classification", "What It Means"),
@@ -1134,6 +1393,11 @@ def main():
         st.session_state.setdefault(key, value)
 
     inject_apple_css()
+    init_db()
+
+    if st.query_params.get("view") == "results":
+        render_admin()
+        return
 
     st.markdown(
         "<div style='text-align:center;border-bottom:1px solid #2c2c2e;padding-bottom:10px;margin-bottom:18px'>"
