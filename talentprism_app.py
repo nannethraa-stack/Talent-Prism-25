@@ -339,7 +339,9 @@ def mini_flywheel_svg(value: int, maxv: int = 5) -> str:
 st.set_page_config(page_title="TalentPrism Assessment Engine", page_icon="🧠", layout="wide")
 
 DEFAULT_STATE = {
-    "step": 1,
+    "step": 0,
+    "candidate_name": "",
+    "candidate_org": "",
     "pos": 0,
     "org": 0,
     "ind": 0,
@@ -404,13 +406,41 @@ def module_title(title: str, subtitle: str = ""):
     )
 
 
-def get_override(key: str) -> str:
-    return st.session_state.get(f"override_{key}", "auto")
-
-
 # ---------------------------------------------------------------------------
 # Step screens
 # ---------------------------------------------------------------------------
+def step0():
+    module_title(
+        "Assessment Intake",
+        "Tell us who this report is for. Your details appear on the final report.",
+    )
+    with st.container(border=True):
+        st.markdown(
+            "<div style='font-size:14px;font-weight:600;color:#f5f5f7;margin-bottom:14px'>Candidate details</div>",
+            unsafe_allow_html=True,
+        )
+        name = st.text_input(
+            "Full name",
+            value=st.session_state.get("intake_name", ""),
+            key="intake_name",
+            placeholder="e.g. Aarav Sharma",
+        )
+        org = st.text_input(
+            "Organisation",
+            value=st.session_state.get("intake_org", ""),
+            key="intake_org",
+            placeholder="e.g. Acme Corporation",
+        )
+        if st.button("Start Assessment", type="primary", use_container_width=True):
+            if not name.strip():
+                st.warning("Please enter the candidate's name.", icon="⚠️")
+                return
+            st.session_state.candidate_name = name.strip()
+            st.session_state.candidate_org = org.strip()
+            st.session_state.step = 1
+            st.rerun()
+
+
 def step1():
     module_title(
         "Positive Psychology",
@@ -424,10 +454,7 @@ def step1():
         return
     score = sum(values.values())
     st.session_state.pos = score
-    ov = get_override("pos")
-    st.session_state.state_pos = (
-        "low" if score <= 60 else "high"
-    ) if ov == "auto" else ov
+    st.session_state.state_pos = "low" if score <= 60 else "high"
     st.session_state.step = 2
     st.rerun()
 
@@ -447,13 +474,8 @@ def step2():
         return
     score = sum(values.values())
     st.session_state.org = score
-    ov = get_override("org")
-    if ov == "auto":
-        pct = score / (len(questions) * 5)
-        state = "low" if pct < 0.5 else ("high" if pct >= 0.75 else "mid")
-    else:
-        state = ov
-    st.session_state.state_org = state
+    pct = score / (len(questions) * 5)
+    st.session_state.state_org = "low" if pct < 0.5 else ("high" if pct >= 0.75 else "mid")
     st.session_state.step = 3
     st.rerun()
 
@@ -471,12 +493,7 @@ def step3():
         return
     score = sum(values.values())
     st.session_state.ind = score
-    ov = get_override("ind")
-    if ov == "auto":
-        state = "low" if score <= 30 else ("high" if score >= 40 else "mid")
-    else:
-        state = ov
-    st.session_state.state_ind = state
+    st.session_state.state_ind = "low" if score <= 30 else ("high" if score >= 40 else "mid")
     st.session_state.step = 4
     st.rerun()
 
@@ -496,13 +513,8 @@ def step4():
         return
     score = sum(values.values())
     st.session_state.cog = score
-    ov = get_override("cog")
-    if ov == "auto":
-        pct = score / (len(questions) * 5)
-        state = "high" if pct >= 0.75 else ("mid" if pct >= 0.45 else "low")
-    else:
-        state = ov
-    st.session_state.state_cog = state
+    pct = score / (len(questions) * 5)
+    st.session_state.state_cog = "high" if pct >= 0.75 else ("mid" if pct >= 0.45 else "low")
     st.session_state.step = 5
     st.rerun()
 
@@ -817,14 +829,24 @@ def step6():
     for idx, t in enumerate(themes, start=1):
         sheet_rows.append((str(idx), t["name"], t["domain_label"], f"{t['score']}", t["cls"]))
 
-    avg_rows = [("Psychological Domain", "Themes", "Average Score", "Classification")]
-    for dkey, dname in DOMAIN_ORDER:
-        ds = [t for t in themes if t["domain"] == dkey]
-        avg = round(sum(t["score"] for t in ds) / len(ds), 1)
-        avg_rows.append((dname, str(len(ds)), str(avg), classify_theme(avg)))
+    cand_name = st.session_state.get("candidate_name", "").strip()
+    cand_org = st.session_state.get("candidate_org", "").strip()
+    name_html = cand_name if cand_name else "Candidate"
+    org_html = cand_org if cand_org else "Organisation not provided"
 
     report = f"""
     <div class='report-body'>
+      <div style='display:flex;justify-content:space-between;align-items:flex-end;gap:14px;border-bottom:1px solid #e5e5ea;padding-bottom:14px;margin-bottom:4px'>
+        <div>
+          <div class='report-tag' style='display:inline-block;background:#0a84ff12;color:#0a84ff;padding:3px 12px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.8px'>TALENTPRISM-25 &middot; STRENGTHS REPORT</div>
+          <div style='font-size:22px;font-weight:800;color:#1d1d1f;letter-spacing:-.3px;margin-top:8px'>{name_html}</div>
+          <div style='font-size:12px;color:#6e6e73;margin-top:2px'>{org_html}</div>
+        </div>
+        <div style='text-align:right;font-size:12px;color:#6e6e73;flex-shrink:0'>
+          <div style='font-size:11px;text-transform:uppercase;letter-spacing:.8px;font-weight:700;color:#6e6e73'>Overall Score</div>
+          <div style='font-size:30px;font-weight:800;color:#0a84ff;line-height:1'>{overall}%</div>
+        </div>
+      </div>
       <div class='report-label'>Scoring &amp; Interpretation Guide</div>
       {html_table(guide_rows)}
       <div class='report-label'>Your Strengths Wheel</div>
@@ -845,8 +867,6 @@ def step6():
       {top5_cards}
       <div class='report-label'>Per-Theme Score Sheet</div>
       {html_table(sheet_rows)}
-      <div class='report-label'>Domain Averages</div>
-      {html_table(avg_rows)}
     </div>
     """
     st.markdown(report, unsafe_allow_html=True)
@@ -962,9 +982,22 @@ def build_pdf() -> bytes:
 
     story = []
 
+    cand_name = st.session_state.get("candidate_name", "").strip() or "Candidate"
+    cand_org = st.session_state.get("candidate_org", "").strip() or "Organisation not provided"
+    name_style = ParagraphStyle(
+        "nm", parent=base["Normal"], fontSize=13, leading=16,
+        fontName="Helvetica-Bold", textColor=colors.HexColor("#1d1d1f"), spaceBefore=2,
+    )
+    org_style = ParagraphStyle(
+        "og", parent=base["Normal"], fontSize=9.5, leading=12,
+        textColor=colors.HexColor("#6e6e73"), spaceAfter=8,
+    )
+
     # Header
     story.append(Paragraph("TalentPrism-25", title_style))
     story.append(Paragraph("STRENGTHS ASSESSMENT REPORT", tag_style))
+    story.append(Paragraph(cand_name, name_style))
+    story.append(Paragraph(cand_org, org_style))
     story.append(Paragraph(
         f"Your Signature Strengths: {', '.join(t['name'] for t in top5)}", sub_style))
     story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#0a84ff")))
@@ -1089,67 +1122,8 @@ def build_pdf() -> bytes:
     story.append(t_sheet)
     story.append(Spacer(1, 6))
 
-    # Domain Averages
-    story.append(Paragraph("Domain Averages", h3))
-    avg_rows = [
-        [Paragraph("Psychological Domain", th), Paragraph("Themes", th),
-         Paragraph("Average Score", th), Paragraph("Classification", th)],
-    ]
-    for dkey, dname in DOMAIN_ORDER:
-        ds = [t for t in themes if t["domain"] == dkey]
-        avg = round(sum(t["score"] for t in ds) / len(ds), 1)
-        avg_rows.append([
-            Paragraph(dname, cell_b),
-            Paragraph(str(len(ds)), cell),
-            Paragraph(str(avg), cell),
-            Paragraph(classify_theme(avg), cell),
-        ])
-    t_avg = Table(avg_rows, colWidths=[3.2 * inch, 1.0 * inch, 1.4 * inch, 1.6 * inch])
-    t_avg.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e5e5ea")),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d1d1d6")),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ("LEFTPADDING", (0, 0), (-1, -1), 7),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ]))
-    story.append(t_avg)
-
     doc.build(story)
     return buf.getvalue()
-
-
-# ---------------------------------------------------------------------------
-# Sidebar: score configurator & manual overrides
-# ---------------------------------------------------------------------------
-def render_sidebar():
-    with st.sidebar:
-        st.markdown("### ⚡ Score Configurator & Manual Overrides")
-        st.caption("Select \"Auto\" to let the engine evaluate answers, or override specific tiers to test routing directly.")
-        st.session_state["override_pos"] = st.selectbox(
-            "1. Positive Psych",
-            options=["auto", "low", "high"],
-            format_func=lambda v: {"auto": "Auto (From Test)", "low": "Low (<= 60)", "high": "High (> 60)"}[v],
-        )
-        st.session_state["override_org"] = st.selectbox(
-            "2. Org Psych",
-            options=["auto", "low", "mid", "high"],
-            format_func=lambda v: {"auto": "Auto (From Test)", "low": "Low", "mid": "Mid", "high": "High"}[v],
-        )
-        st.session_state["override_ind"] = st.selectbox(
-            "3. Ind/Work Psych",
-            options=["auto", "low", "mid", "high"],
-            format_func=lambda v: {"auto": "Auto (From Test)", "low": "Low", "mid": "Mid", "high": "High"}[v],
-        )
-        st.session_state["override_cog"] = st.selectbox(
-            "4. Cognitive Psych",
-            options=["auto", "low", "mid", "high"],
-            format_func=lambda v: {"auto": "Auto (From Test)", "low": "Low", "mid": "Mid (Target Set 1)", "high": "High (Target Set 2)"}[v],
-        )
-        st.divider()
-        st.markdown("**Adaptive diagnostic pipeline**")
-        st.caption("Positive → Org → Ind/Work → Cognitive → Behavioral → Executive")
 
 
 # ---------------------------------------------------------------------------
@@ -1160,7 +1134,6 @@ def main():
         st.session_state.setdefault(key, value)
 
     inject_apple_css()
-    render_sidebar()
 
     st.markdown(
         "<div style='text-align:center;border-bottom:1px solid #2c2c2e;padding-bottom:10px;margin-bottom:18px'>"
@@ -1170,6 +1143,9 @@ def main():
     )
 
     step = st.session_state.step
+    if step == 0:
+        step0()
+        return
     qcol, pcol = st.columns([3.3, 1.05], gap="large")
     with qcol:
         if step == 1:
