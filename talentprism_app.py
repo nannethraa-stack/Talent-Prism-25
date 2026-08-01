@@ -221,19 +221,16 @@ def inject_apple_css():
     .q-num { display: inline-flex; width: 22px; height: 22px; border-radius: 50%;
         background: #2c2c2e; color: #0a84ff; font-size: 11px; font-weight: 700;
         align-items: center; justify-content: center; margin-right: 9px; vertical-align: middle; }
-    .opt { height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-        font-size: 13px; font-weight: 600; color: #f5f5f7; width: 100%;
-        border: 1px solid #3a3a3c; background: #2c2c2e; box-sizing: border-box; }
-    .opt.selected { background: #0a84ff; color: #fff; border-color: #0a84ff;
-        box-shadow: 0 2px 10px rgba(10,132,255,0.40); }
-    .scale-labels { display: flex; justify-content: space-between; margin-top: 7px;
-        font-size: 10px; color: #8e8e93; letter-spacing: .2px; }
-    .scale-labels span { padding: 0 2px; }
+    .scale-lbl {
+        text-align: center; font-size: 9.5px; line-height: 1.25; color: #8e8e93;
+        margin-top: 6px; letter-spacing: 0.1px; word-break: break-word;
+    }
     .mini-flywheel { flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
     .stButton > button { border-radius: 12px; border: 1px solid #3a3a3c; background: #2c2c2e;
         color: #f5f5f7; font-weight: 600; min-height: 40px; transition: all .18s ease; }
     .stButton > button:hover { background: #3a3a3c; }
-    .stButton > button[kind="primary"] { background: #0a84ff; border-color: #0a84ff; color: #fff; }
+    .stButton > button[kind="primary"] { background: #0a84ff; border-color: #0a84ff; color: #fff;
+        box-shadow: 0 2px 10px rgba(10,132,255,0.40); }
     .stButton > button[kind="primary"]:hover { background: #0a6cdb; }
     .progress-card { background: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 16px;
         padding: 18px 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.45); position: sticky; top: 70px; }
@@ -619,16 +616,34 @@ def render_admin():
     st.button("⬅️ Back to Assessment", use_container_width=True, on_click=reset_session)
 
 
+SCALE_LABELS_SHORT = [
+    "Strongly<br>Disagree",
+    "Disagree",
+    "Neutral",
+    "Agree",
+    "Strongly<br>Agree",
+]
+
+
+def _set_likert(state_key: str, value: int):
+    """Callback: only sets a score when the user actually clicks."""
+    st.session_state[state_key] = value
+
+
 @st.fragment
 def render_questions_options(questions, form_key):
-    """Render the option buttons for every question.
+    """Render Likert options with tick-on-select and labels aligned under each score.
 
-    Fragment: an option click re-renders only this block (fast) instead of
-    the whole app. Selections are stored in session_state; the parent step
-    reads them when "Continue" is clicked.
+    No default selection — every question starts blank (numbers 1–5 only).
+    A ✓ and primary styling appear only after the user clicks an option.
+    Labels sit in matching columns under 1–5.
     """
     for idx, (qid, text) in enumerate(questions, start=1):
-        current = st.session_state.get(f"{form_key}_{qid}")
+        state_key = f"{form_key}_{qid}"
+        # Only treat as selected if user has explicitly chosen 1–5
+        current = st.session_state.get(state_key)
+        if current not in (1, 2, 3, 4, 5):
+            current = None
         with st.container(border=True):
             st.markdown(
                 f"<div class='q-head'>"
@@ -639,17 +654,23 @@ def render_questions_options(questions, form_key):
             cols = st.columns(5, gap="small")
             for v in range(1, 6):
                 with cols[v - 1]:
-                    if current == v:
-                        st.markdown("<div class='opt selected'>&#10003;</div>", unsafe_allow_html=True)
-                    else:
-                        if st.button(str(v), key=f"{form_key}_{qid}_v{v}", use_container_width=True):
-                            st.session_state[f"{form_key}_{qid}"] = v
-            st.markdown(
-                f"<div class='scale-labels'>"
-                f"<span>Strongly Disagree</span><span>Disagree</span><span>Neutral</span>"
-                f"<span>Agree</span><span>Strongly Agree</span></div>",
-                unsafe_allow_html=True,
-            )
+                    is_sel = current is not None and current == v
+                    st.button(
+                        "✓" if is_sel else str(v),
+                        key=f"{form_key}_{qid}_v{v}",
+                        use_container_width=True,
+                        type="primary" if is_sel else "secondary",
+                        on_click=_set_likert,
+                        args=(state_key, v),
+                    )
+            # Labels aligned under each score column
+            lbl_cols = st.columns(5, gap="small")
+            for i, lab in enumerate(SCALE_LABELS_SHORT):
+                with lbl_cols[i]:
+                    st.markdown(
+                        f"<div class='scale-lbl'>{lab}</div>",
+                        unsafe_allow_html=True,
+                    )
 
 
 def render_questions(questions, form_key):
