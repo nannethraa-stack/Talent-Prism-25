@@ -1,10 +1,20 @@
 services:
   - type: web
-    name: talentprism-assessment
+    name: talentprism
     runtime: python
-    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: streamlit run talentprism_app.py --server.port $PORT --server.address 0.0.0.0
+    healthCheckPath: /_stcore/health
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: talentprism-db
+          property: connectionString
+      - key: TALENTPRISM_ADMIN_KEY
+        value: talentprism-admin
+
+databases:
+  - name: talentprism-db
+    databaseName: talentprism
+    user: talentprism
+    plan: free
